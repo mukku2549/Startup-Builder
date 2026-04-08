@@ -1,6 +1,3 @@
-// ==========================================
-// 1. API Services
-// ==========================================
 async function fetchIdeas() {
   try {
     const response = await fetch('https://dummyjson.com/posts?limit=100');
@@ -36,9 +33,28 @@ async function fetchRandomIdea() {
   }
 }
 
-// ==========================================
-// 2. Toast Notification System
-// ==========================================
+const ThemeManager = {
+  theme: 'light',
+  init() {
+    this.theme = localStorage.getItem('VenlyTheme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    this.applyTheme(this.theme);
+  },
+  toggle() {
+    this.theme = this.theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('VenlyTheme', this.theme);
+    this.applyTheme(this.theme);
+  },
+  applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const icon = document.querySelector('#theme-toggle i');
+    if (icon) {
+      icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+};
+ThemeManager.init();
+
 class ToastManager {
   constructor() {
     this.container = document.createElement('div');
@@ -59,8 +75,8 @@ class ToastManager {
     const toastElem = document.createElement('div');
     Object.assign(toastElem.style, {
       padding: '0.75rem 1.25rem',
-      backgroundColor: 'white',
-      color: '#0F172A',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text-main)',
       borderRadius: '0.75rem',
       boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
       border: '1px solid #E2E8F0',
@@ -76,7 +92,7 @@ class ToastManager {
 
     const isSuccess = type === 'success';
     const iconColor = isSuccess ? '#6366F1' : '#EF4444';
-    
+
     toastElem.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background-color: ${iconColor}; color: white;">
         <i data-lucide="${isSuccess ? 'check' : 'alert-circle'}" style="width: 14px; height: 14px;"></i>
@@ -85,7 +101,7 @@ class ToastManager {
     `;
 
     this.container.appendChild(toastElem);
-    
+
     if (window.lucide) {
       window.lucide.createIcons({ root: toastElem });
     }
@@ -105,16 +121,13 @@ class ToastManager {
       }, 300);
     }, duration);
   }
-  
+
   success(message) { this.show(message, 'success'); }
   error(message) { this.show(message, 'error'); }
 }
 
 const toast = new ToastManager();
 
-// ==========================================
-// 3. State Management (Store)
-// ==========================================
 class Store {
   constructor() {
     this.favorites = [];
@@ -124,7 +137,7 @@ class Store {
 
   loadFavorites() {
     try {
-      const stored = localStorage.getItem('startupBuilderFavorites');
+      const stored = localStorage.getItem('VenlyFavorites');
       this.favorites = stored ? JSON.parse(stored) : [];
     } catch (e) {
       console.error("Failed to parse favorites", e);
@@ -133,7 +146,7 @@ class Store {
   }
 
   saveFavorites() {
-    localStorage.setItem('startupBuilderFavorites', JSON.stringify(this.favorites));
+    localStorage.setItem('VenlyFavorites', JSON.stringify(this.favorites));
     this.notify();
   }
 
@@ -171,9 +184,6 @@ class Store {
 
 const store = new Store();
 
-// ==========================================
-// 4. UI Components
-// ==========================================
 function renderNavbar(container) {
   container.innerHTML = `
     <nav class="navbar">
@@ -182,21 +192,27 @@ function renderNavbar(container) {
           <div>
             <a href="#/" class="nav-brand">
               <i data-lucide="lightbulb" style="width: 24px; height: 24px;"></i>
-              <span>Startup Builder</span>
+              <span>Venly</span>
             </a>
           </div>
           
-          <div class="nav-links">
-            <a href="#/" class="nav-link active">Home</a>
-            <a href="#/explore" class="nav-link">Explore</a>
-            <a href="#/generate" class="nav-link">Generate</a>
-            <a href="#/favorites" class="nav-link">Favorites</a>
-          </div>
-          
-          <div class="mobile-menu-btn">
-            <button aria-label="Menu" style="padding: 0.5rem;">
-              <i data-lucide="menu" style="width: 24px; height: 24px;"></i>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="nav-links">
+              <a href="#/" class="nav-link active">Home</a>
+              <a href="#/explore" class="nav-link">Explore</a>
+              <a href="#/generate" class="nav-link">Generate</a>
+              <a href="#/favorites" class="nav-link">Favorites</a>
+            </div>
+            
+            <button id="theme-toggle" aria-label="Toggle theme" style="padding: 0.5rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="moon" style="width: 20px; height: 20px;"></i>
             </button>
+            
+            <div class="mobile-menu-btn">
+              <button aria-label="Menu" style="padding: 0.5rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="menu" style="width: 24px; height: 24px;"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -229,7 +245,7 @@ function renderIdeaCard(idea) {
 
   const favBtn = card.querySelector('.fav-btn');
   const favIcon = card.querySelector('i[data-lucide="heart"]');
-  
+
   favBtn.addEventListener('click', (e) => {
     e.preventDefault();
     if (store.isFavorite(idea.id)) {
@@ -245,9 +261,9 @@ function renderIdeaCard(idea) {
       favBtn.setAttribute('aria-label', 'Remove from favorites');
       favIcon.setAttribute('fill', 'currentColor');
     }
-    
+
     if (window.lucide) {
-      window.lucide.createIcons(!window.lucide.refresh ? {} : undefined); 
+      window.lucide.createIcons(!window.lucide.refresh ? {} : undefined);
     }
   });
 
@@ -255,9 +271,6 @@ function renderIdeaCard(idea) {
   return cardOuter;
 }
 
-// ==========================================
-// 5. Views
-// ==========================================
 function HomeView(container) {
   container.innerHTML = `
     <div class="page-container hero-section">
@@ -272,11 +285,11 @@ function HomeView(container) {
         </div>
         
         <h1 class="hero-title animate-fade-in-up">
-          Build Your <span class="text-gradient">Next Startup</span> Idea
+          Build Your <span class="text-gradient">Next Venly</span> Idea
         </h1>
         
         <p class="hero-subtitle animate-fade-in-up animation-delay-150">
-          Stuck trying to find what to build? Startup Builder is your brainstorming platform to discover curated concepts or generate random inspiration to kickstart your journey.
+          Stuck trying to find what to build? Venly is your brainstorming platform to discover curated concepts or generate random inspiration to kickstart your journey.
         </p>
         
         <div class="hero-actions animate-fade-in-up animation-delay-300">
@@ -301,7 +314,7 @@ function ExploreView(container) {
   let searchTerm = '';
   let selectedTag = 'All';
   let sortAscending = true;
-  
+
   container.innerHTML = `
     <div class="page-container container" id="explore-container">
       <div class="loader-container">
@@ -337,7 +350,7 @@ function ExploreView(container) {
     ideas.forEach(idea => idea.tags?.forEach(tag => allTagsSet.add(tag)));
     const allTags = ['All', ...Array.from(allTagsSet).sort()];
 
-    const filteredIdeas = ideas.filter(idea => 
+    const filteredIdeas = ideas.filter(idea =>
       (selectedTag === 'All' || idea.tags?.includes(selectedTag)) &&
       idea.title.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => {
@@ -348,7 +361,7 @@ function ExploreView(container) {
 
     root.innerHTML = `
       <div class="text-center" style="margin-bottom: 2.5rem;">
-        <h1 class="font-extrabold" style="font-size: 2.25rem; margin-bottom: 1rem; letter-spacing: -0.025em;">Explore startup concepts</h1>
+        <h1 class="font-extrabold" style="font-size: 2.25rem; margin-bottom: 1rem; letter-spacing: -0.025em;">Explore Venly concepts</h1>
         <p class="text-muted" style="font-size: 1.125rem; max-width: 42rem; margin: 0 auto;">Browse through hundreds of curated ideas, tailor your search to fix specific niches, and find your next big venture.</p>
       </div>
 
@@ -456,20 +469,20 @@ function GenerateView(container) {
     root.innerHTML = `
       <div class="text-center" style="margin-bottom: 3rem; max-width: 42rem;">
         <h1 class="font-extrabold" style="font-size: 2.25rem; margin-bottom: 1rem; letter-spacing: -0.025em;">Feeling Lucky?</h1>
-        <p class="text-muted" style="font-size: 1.125rem;">Click the button below to randomly generate a startup concept from our vast database.</p>
+        <p class="text-muted" style="font-size: 1.125rem;">Click the button below to randomly generate a Venly concept from our vast database.</p>
       </div>
 
       <button id="generate-btn" ${loading ? 'disabled' : ''} class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.125rem; margin-bottom: 4rem;">
-        ${loading 
-          ? `<i data-lucide="loader-2" style="width: 24px; height: 24px;" class="animate-spin"></i> <span>Generating...</span>`
-          : `<i data-lucide="dices" style="width: 24px; height: 24px;"></i> <span>Generate Idea</span>`
-        }
+        ${loading
+        ? `<i data-lucide="loader-2" style="width: 24px; height: 24px;" class="animate-spin"></i> <span>Generating...</span>`
+        : `<i data-lucide="dices" style="width: 24px; height: 24px;"></i> <span>Generate Idea</span>`
+      }
       </button>
 
       <div style="width: 100%; max-width: 42rem;" id="idea-slot">
         ${!idea ? `
           <div class="generate-placeholder">
-            <div class="empty-icon-wrap" style="background-color: white;">
+            <div class="empty-icon-wrap" style="background-color: var(--surface);">
               <i data-lucide="dices" style="width: 32px; height: 32px; color: var(--text-light);"></i>
             </div>
             <p style="color: var(--text-muted); font-weight: 500; font-size: 1.125rem; text-align: center;">
@@ -510,7 +523,7 @@ function FavoritesView(container) {
 
   const renderContent = () => {
     const favorites = store.getFavorites();
-    
+
     root.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 1.5rem; margin-bottom: 2.5rem; border-bottom: 1px solid var(--border);">
         <div>
@@ -522,7 +535,7 @@ function FavoritesView(container) {
         </div>
         
         ${favorites.length > 0 ? `
-          <div style="background-color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; color: #4338CA; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+          <div style="background-color: var(--surface); padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; color: var(--badge-text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
             ${favorites.length} ${favorites.length === 1 ? 'Idea' : 'Ideas'} Saved
           </div>
         ` : ''}
@@ -566,9 +579,6 @@ function FavoritesView(container) {
   renderContent();
 }
 
-// ==========================================
-// 6. Router
-// ==========================================
 class Router {
   constructor(routes, rootElementId) {
     this.routes = routes;
@@ -602,9 +612,7 @@ class Router {
   }
 }
 
-// ==========================================
-// 7. Initialization
-// ==========================================
+
 document.addEventListener('DOMContentLoaded', () => {
   const appElement = document.getElementById('root');
   appElement.className = 'app-container';
@@ -614,6 +622,12 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
 
   renderNavbar(document.getElementById('navbar-container'));
+  
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => ThemeManager.toggle());
+    ThemeManager.applyTheme(ThemeManager.theme);
+  }
 
   const routes = {
     '/': HomeView,
